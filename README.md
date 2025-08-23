@@ -1,44 +1,221 @@
-# eBPF-exercise
-Linux RT - Home Exercise @ Salt
-Background
-The purpose of this exercise is to evaluate your ability to work with new,
-exciting low-level Linux technologies, design clear solutions, and write working
-code. Don’t worry if you’re new to eBPF - learning and research are part of the
-process.
-The technology relevant for your role is eBPF. https://ebpf.io/
-BPF (Berkeley Packet Filter) is a highly flexible and efficient virtual machine-like construct
-within the Linux kernel, enabling bytecode execution at various hook points securely. It is
-widely utilized across several Linux kernel subsystems, notably in networking, tracing,
-and security (e.g., sandboxing).
-Although BPF has been around since 1992, this document focuses on the enhanced
-version, the Extended Berkeley Packet Filter (eBPF), which debuted in Kernel version 3.18.
-This modern iteration has effectively replaced the original, now termed "classic" BPF
-(cBPF). Historically, cBPF was recognized as the packet filtering language utilized by
-tools like tcpdump. However, in contemporary Linux systems, only eBPF is executed.
-When a classic BPF bytecode is loaded, it is automatically converted to eBPF format
-within the kernel before execution.
-Exercise
-● Create an eBPF program
-● eBPF programs should use the Cilium framework; eBPF code should be in C.
-● eBPF should be generated as part of the build flow.
-● eBPF program should be able to probe, using kprobes for both sys_read and
-sys_write kernel functions.
-The expected result:
-Every time a call to sys_read and sys_write on the Linux machine it runs on, the eBPF
-program will print “hello sys_read/sys_write was called”.
-Output:
-● Log file.
+# Linux RT - eBPF Exercise Implementation
 
-● screen user space print please - do not rely on
-“/sys/kernel/debug/tracing/trace_pipe”.
-● Please provide the eBPF as well as the user plan code.
-● Please provide instructions for installation/running it.
-● Be able to pass configuration information from the user plan code to the eBPF
-program.
-● Be able to pass some information from the eBPF program to the user plan code.
-Once ready, we will set a meeting to discuss the implementation. We may ask some
-questions regarding why it was developed as it was, as well as think together on
-possible improvements.
-There are numerous tutorials and videos out there that can help in getting started. Feel
-free to use them. Using AI assistance is allowed and encouraged.
-Best of Luck!
+## Overview
+
+This project implements a complete eBPF (Extended Berkeley Packet Filter) solution using the Cilium framework to monitor system calls (`sys_read` and `sys_write`) in real-time. The implementation demonstrates modern eBPF development practices with proper user space integration.
+
+## Features
+
+- **Real-time system call monitoring** using kprobes
+- **Cilium framework integration** for modern eBPF development
+- **Bidirectional communication** between user space and kernel space
+- **Configurable logging** with both console and file output
+- **Graceful signal handling** for clean termination
+- **Comprehensive build system** with automatic eBPF generation
+
+## Architecture
+
+### Components
+
+1. **eBPF Program** (`ebpf_probe.c`)
+   - Written in C using eBPF helpers
+   - Attaches kprobes to `__x64_sys_read` and `__x64_sys_write`
+   - Collects process information (PID, TGID, command name)
+   - Sends events to user space via perf ring buffer
+
+2. **User Space Program** (`cilium_ebpf_probe.go`)
+   - Written in Go using Cilium eBPF framework
+   - Loads and attaches eBPF programs
+   - Processes events from kernel space
+   - Provides configuration interface
+   - Handles logging and signal termination
+
+3. **Build System** (`Makefile`)
+   - Automated eBPF compilation and generation
+   - Go module management
+   - Clean build artifacts
+
+## Requirements
+
+- Linux kernel 4.18+ (for eBPF support)
+- Go 1.19+
+- Clang/LLVM for eBPF compilation
+- Root privileges (for eBPF operations)
+
+## Installation
+
+### 1. Install Dependencies
+
+```bash
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y clang llvm libbpf-dev libelf-dev zlib1g-dev \
+    build-essential linux-headers-$(uname -r) bpftool golang-go \
+    golang-github-cilium-ebpf-dev
+```
+
+### 2. Clone and Build
+
+```bash
+git clone <repository-url>
+cd <repository-name>
+make build
+```
+
+## Usage
+
+### Run the eBPF Probe
+
+```bash
+# Run with sudo (required for eBPF operations)
+sudo ./cilium_probe
+
+### Verify Build Success
+
+After building, you should see:
+- `cilium_probe` executable file
+- `bpf_bpfel.go` and `bpf_bpfel.o` generated files
+- No build errors
+```
+
+### Expected Output
+
+The program will:
+1. Load and attach eBPF programs to kernel functions
+2. Print "hello sys_read was called" or "hello sys_write was called" for each system call
+3. Log detailed information to `syscalls.log`
+4. Handle Ctrl+C gracefully for clean termination
+
+### Configuration
+
+The program supports configuration through the `Config` struct:
+
+```go
+type Config struct {
+    Verbose uint32 // Verbose logging level (0=disabled, 1=enabled)
+}
+```
+
+Configuration is passed from user space to the eBPF program via a map.
+
+## Implementation Details
+
+### eBPF Program (`ebpf_probe.c`)
+
+- Uses kprobes to hook into system call entry points
+- Collects process context information
+- Sends structured events to user space
+- Supports configuration via maps
+
+### User Space Program (`cilium_ebpf_probe.go`)
+
+- Loads eBPF bytecode using Cilium framework
+- Manages perf ring buffer for event reception
+- Processes events in real-time
+- Provides graceful shutdown handling
+
+### Data Flow
+
+1. **System call occurs** → Kernel executes `sys_read` or `sys_write`
+2. **eBPF program triggers** → Kprobe fires, eBPF code executes
+3. **Event collection** → Process info, timestamps, function names captured
+4. **User space notification** → Event sent via perf ring buffer
+5. **Event processing** → User space program receives and logs event
+
+## Build Process
+
+The build process automatically:
+
+1. **Updates Go dependencies** (`go mod tidy`)
+2. **Generates eBPF Go bindings** (`go generate`)
+   - Compiles `ebpf_probe.c` → `bpf_bpfel.o` (eBPF bytecode)
+   - Creates `bpf_bpfel.go` (Go bindings for eBPF objects)
+3. **Builds the final executable** (`go build`)
+
+### Build Commands
+
+```bash
+# Full build (recommended)
+make build
+
+# Alternative: step by step
+go mod tidy
+go generate
+go build -o cilium_probe cilium_ebpf_probe.go bpf_bpfel.go
+
+# Clean build artifacts
+make clean
+
+# Install dependencies (first time only)
+make install-deps
+```
+
+### What Gets Generated
+
+- `bpf_bpfel.o` - Compiled eBPF bytecode (little-endian)
+- `bpf_bpfel.go` - Go code to load eBPF objects
+- `cilium_probe` - Final executable
+
+## Signal Handling
+
+The program properly handles termination signals:
+
+- **SIGINT (Ctrl+C)**: Graceful shutdown
+- **SIGTERM**: Clean termination
+- **Resource cleanup**: Properly detaches eBPF programs and closes file descriptors
+
+## Logging
+
+- **Console output**: Real-time system call notifications
+- **File logging**: Detailed event information in `syscalls.log`
+- **Error handling**: Comprehensive error reporting and recovery
+
+## Performance Considerations
+
+- **Perf ring buffer**: Efficient kernel-user space communication
+- **Event batching**: Optimized for high-frequency events
+- **Memory management**: Proper cleanup and resource management
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Permission denied**: Ensure running with sudo
+2. **eBPF not supported**: Check kernel version (4.18+ required)
+3. **Build failures**: Verify all dependencies are installed
+
+### Debug Mode
+
+Enable verbose logging by setting `Verbose: 1` in the configuration.
+
+## Development
+
+### Project Structure
+
+```
+.
+.
+├── ebpf_probe.c          # eBPF C program
+├── vmlinux.h             # BTF headers for CO-RE (required for build)
+├── cilium_ebpf_probe.go  # User space Go program
+├── bpf_bpfel.go          # Auto-generated Go bindings (Little Endian) ← bpf2go
+├── bpf_bpfeb.go          # Auto-generated Go bindings (Big Endian)   ← bpf2go
+├── bpf_bpfel.o           # eBPF bytecode (ELF, LE)                  ← build artifact
+├── bpf_bpfeb.o           # eBPF bytecode (ELF, BE)                  ← build artifact
+├── go.mod                # Go module definition (dependencies)
+├── go.sum                # Checksums for dependencies
+├── Makefile              # Build flow: go generate → go build
+├── README.md             # Documentation
+└── .gitignore            # Recommended: ignore binary, logs, and *.o
+
+```
+
+### Adding New Features
+
+1. **New system calls**: Add kprobes in Go code and corresponding eBPF functions
+2. **Additional data**: Extend the `Event` struct and eBPF data collection
+3. **Configuration**: Add new fields to the `Config` struct
+
+## License
+
+GPL
