@@ -59,7 +59,7 @@ sudo apt-get install -y clang llvm libbpf-dev libelf-dev zlib1g-dev \
 ```bash
 git clone <repository-url>
 cd <repository-name>
-make cilium-framework
+make build
 ```
 
 ## Usage
@@ -69,6 +69,13 @@ make cilium-framework
 ```bash
 # Run with sudo (required for eBPF operations)
 sudo ./cilium_probe
+
+### Verify Build Success
+
+After building, you should see:
+- `cilium_probe` executable file
+- `bpf_bpfel.go` and `bpf_bpfel.o` generated files
+- No build errors
 ```
 
 ### Expected Output
@@ -119,13 +126,35 @@ Configuration is passed from user space to the eBPF program via a map.
 
 The build process automatically:
 
-1. Compiles eBPF C code to bytecode
-2. Generates Go bindings for eBPF objects
-3. Builds the final executable
+1. **Updates Go dependencies** (`go mod tidy`)
+2. **Generates eBPF Go bindings** (`go generate`)
+   - Compiles `ebpf_probe.c` → `bpf_bpfel.o` (eBPF bytecode)
+   - Creates `bpf_bpfel.go` (Go bindings for eBPF objects)
+3. **Builds the final executable** (`go build`)
+
+### Build Commands
 
 ```bash
-make cilium-framework
+# Full build (recommended)
+make build
+
+# Alternative: step by step
+go mod tidy
+go generate
+go build -o cilium_probe cilium_ebpf_probe.go bpf_bpfel.go
+
+# Clean build artifacts
+make clean
+
+# Install dependencies (first time only)
+make install-deps
 ```
+
+### What Gets Generated
+
+- `bpf_bpfel.o` - Compiled eBPF bytecode (little-endian)
+- `bpf_bpfel.go` - Go code to load eBPF objects
+- `cilium_probe` - Final executable
 
 ## Signal Handling
 
