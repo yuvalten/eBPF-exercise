@@ -47,6 +47,7 @@ This guide provides detailed instructions for setting up the eBPF development en
 # Connect via SSH (replace with your key and IP)
 ssh -i your-key.pem ubuntu@<ip>
 e.g ssh -i "C:\Users\Tyuva\Downloads\yuval_salt.pem" ubuntu@13.51.150.11
+```
 
 ### Step 2: Update System Packages
 
@@ -54,6 +55,7 @@ e.g ssh -i "C:\Users\Tyuva\Downloads\yuval_salt.pem" ubuntu@13.51.150.11
 # Update package lists and upgrade existing packages
 sudo apt-get update
 sudo apt-get upgrade -y
+```
 
 ### Step 3: Install Required Dependencies
 
