@@ -35,23 +35,11 @@ This project implements a complete eBPF (Extended Berkeley Packet Filter) soluti
    - Go module management
    - Clean build artifacts
 
-## Requirements
 
-- Linux kernel 4.18+ (for eBPF support)
-- Go 1.19+
-- Clang/LLVM for eBPF compilation
-- Root privileges (for eBPF operations)
 
 ## Installation & Setup Guide
 
 This guide provides detailed instructions for setting up the eBPF development environment from scratch on an EC2 instance (tested on Ubuntu 24.04.2 LTS).
-
-### Prerequisites
-
-- **EC2 Instance**: Ubuntu 22.04 LTS or later
-- **Access**: SSH access with sudo privileges
-- **Kernel**: Linux kernel 4.18+ (for eBPF support)
-- **Architecture**: x86_64 (tested on AWS EC2)
 
 ### Step 1: Connect to Your EC2 Instance
 
@@ -105,8 +93,8 @@ bpftool --version
 **Expected output:**
 ```
 Ubuntu clang version 18.1.3 (1ubuntu1)
-go version go1.21.0 linux/amd64
-bpftool, version 7.0.0
+go version go1.24.6 linux/amd64
+bpftool v7.6.0
 ```
 
 ### Step 4: Install Cilium eBPF Framework
