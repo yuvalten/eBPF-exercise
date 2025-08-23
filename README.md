@@ -138,15 +138,6 @@ go get github.com/cilium/ebpf@latest
 cat go.mod
 ```
 
-**Expected go.mod content:**
-```
-module cilium-ebpf-probe
-
-go 1.21
-
-require github.com/cilium/ebpf v0.11.0
-```
-
 ### Step 7: Generate Kernel Headers
 
 ```bash
@@ -252,46 +243,7 @@ sudo ./cilium_probe
 - Logs detailed information to `syscalls.log`
 - Gracefully shuts down on Ctrl+C
 
-## Quick Start (After Installation)
-
-If you've already completed the installation, here's the quick way to run the project:
-
-```bash
-# Build the project
-make build
-
-# Test it (10 seconds)
-make test
-
-# Run the full program
-sudo ./cilium_probe
-```
-
-## Usage
-
-### Run the eBPF Probe
-
-```bash
-# Run with sudo (required for eBPF operations)
-sudo ./cilium_probe
-
-### Verify Build Success
-
-After building, you should see:
-- `cilium_probe` executable file
-- `bpf_bpfel.go` and `bpf_bpfel.o` generated files
-- No build errors
-```
-
-### Expected Output
-
-The program will:
-1. Load and attach eBPF programs to kernel functions
-2. Print "hello sys_read was called" or "hello sys_write was called" for each system call
-3. Log detailed information to `syscalls.log`
-4. Handle Ctrl+C gracefully for clean termination
-
-### Configuration
+## Configuration
 
 The program supports configuration through the `Config` struct:
 
@@ -336,38 +288,6 @@ The build process automatically:
    - Compiles `ebpf_probe.c` → `bpf_bpfel.o` (eBPF bytecode)
    - Creates `bpf_bpfel.go` (Go bindings for eBPF objects)
 3. **Builds the final executable** (`go build`)
-
-### Build Commands
-
-```bash
-# Full build (recommended)
-make build
-
-# Alternative: step by step
-go mod tidy
-go generate
-go build -o cilium_probe cilium_ebpf_probe.go bpf_bpfel.go
-
-# Clean build artifacts
-make clean
-
-# Install dependencies (first time only)
-make install-deps
-```
-
-### What Gets Generated
-
-- `bpf_bpfel.o` - Compiled eBPF bytecode (little-endian)
-- `bpf_bpfel.go` - Go code to load eBPF objects
-- `cilium_probe` - Final executable
-
-## Signal Handling
-
-The program properly handles termination signals:
-
-- **SIGINT (Ctrl+C)**: Graceful shutdown
-- **SIGTERM**: Clean termination
-- **Resource cleanup**: Properly detaches eBPF programs and closes file descriptors
 
 ## Logging
 
