@@ -42,24 +42,239 @@ This project implements a complete eBPF (Extended Berkeley Packet Filter) soluti
 - Clang/LLVM for eBPF compilation
 - Root privileges (for eBPF operations)
 
-## Installation
+## Installation & Setup Guide
 
-### 1. Install Dependencies
+This guide provides detailed instructions for setting up the eBPF development environment from scratch on an EC2 instance (tested on Ubuntu 24.04.2 LTS).
+
+### Prerequisites
+
+- **EC2 Instance**: Ubuntu 22.04 LTS or later
+- **Access**: SSH access with sudo privileges
+- **Kernel**: Linux kernel 4.18+ (for eBPF support)
+- **Architecture**: x86_64 (tested on AWS EC2)
+
+### Step 1: Connect to Your EC2 Instance
 
 ```bash
-# Ubuntu/Debian
+# Connect via SSH (replace with your key and IP)
+ssh -i your-key.pem ubuntu@<ip>
+e.g ssh -i "C:\Users\Tyuva\Downloads\yuval_salt.pem" ubuntu@13.51.150.11
+
+### Step 2: Update System Packages
+
+```bash
+# Update package lists and upgrade existing packages
 sudo apt-get update
-sudo apt-get install -y clang llvm libbpf-dev libelf-dev zlib1g-dev \
-    build-essential linux-headers-$(uname -r) bpftool golang-go \
-    golang-github-cilium-ebpf-dev
+sudo apt-get upgrade -y
+
+### Step 3: Install Required Dependencies
+
+```bash
+# Install essential build tools and development packages
+sudo apt-get install -y \
+    build-essential \
+    clang \
+    llvm \
+    libbpf-dev \
+    libelf-dev \
+    zlib1g-dev \
+    linux-headers-$(uname -r) \
+    linux-tools-$(uname -r) \
+    golang-go \
+    git \
+    make \
+    curl \
+    wget
+
+git clone --recurse-submodules https://github.com/libbpf/bpftool.git
+make -C ~/bpftool/src -j"$(nproc)"
+sudo ~/bpftool/src/bpftool version
+
+sudo install -m 0755 ~/bpftool/src/bpftool /usr/local/bin/bpftool
+command -v bpftool
+echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+
+# Verify installations
+clang --version
+go version
+bpftool --version
 ```
 
-### 2. Clone and Build
+**Expected output:**
+```
+Ubuntu clang version 18.1.3 (1ubuntu1)
+go version go1.21.0 linux/amd64
+bpftool, version 7.0.0
+```
+
+### Step 4: Install Cilium eBPF Framework
 
 ```bash
-git clone <repository-url>
-cd <repository-name>
+# Install Cilium eBPF Go library
+go install github.com/cilium/ebpf/cmd/bpf2go@latest
+echo 'export PATH="$HOME/go/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# Verify installation
+bpf2go --help
+```
+
+### Step 5: Clone and Setup Project
+
+```bash
+# Create project directory
+mkdir ~/github-repo
+cd ~/github-repo
+
+# Clone the repository
+git clone https://github.com/yuvalten/eBPF-exercise/tree/ebpf_exercise
+
+# Verify project structure
+ll
+```
+
+### Step 6: Initialize Go Module
+
+```bash
+# Initialize Go module (if not already done)
+#go mod init cilium-ebpf-probe
+
+# Add Cilium eBPF dependency
+go get github.com/cilium/ebpf@latest
+
+# Verify go.mod file
+cat go.mod
+```
+
+**Expected go.mod content:**
+```
+module cilium-ebpf-probe
+
+go 1.21
+
+require github.com/cilium/ebpf v0.11.0
+```
+
+### Step 7: Generate Kernel Headers
+
+```bash
+# Generate vmlinux.h for CO-RE (Compile Once, Run Everywhere) support
+bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
+
+# Verify file was created
+ls -la vmlinux.h
+```
+
+**Expected output:**
+```
+-rw-r--r-- 1 ubuntu ubuntu 3145728 Aug 23 15:10 vmlinux.h
+```
+
+### Step 8: Build the Project
+
+```bash
+# Build the complete eBPF solution
 make build
+```
+
+**Expected output:**
+```
+Building eBPF solution using Cilium framework...
+1. Updating Go dependencies...
+go mod tidy
+2. Generating eBPF Go bindings...
+go generate
+Compiled /home/ubuntu/github-repo/bpf_bpfel.o
+Stripped /home/ubuntu/github-repo/bpf_bpfel.o
+Wrote /home/ubuntu/github-repo/bpf_bpfel.go
+Compiled /home/ubuntu/github-repo/bpf_bpfeb.o
+Stripped /home/ubuntu/github-repo/bpf_bpfeb.o
+Wrote /home/ubuntu/github-repo/bpf_bpfeb.go
+3. Building executable...
+go build -o cilium_probe cilium_ebpf_probe.go bpf_bpfel.go
+Build complete! Run with: sudo ./cilium_probe
+```
+
+### Step 9: Verify Build Success
+
+```bash
+# Check generated files
+ls -la *.go *.o cilium_probe
+
+# Verify executable
+file cilium_probe
+```
+
+**Expected output:**
+```
+-rw-rw-r-- 1 ubuntu ubuntu    3403 Aug 23 20:18 bpf_bpfeb.go
+-rw-rw-r-- 1 ubuntu ubuntu    7352 Aug 23 20:18 bpf_bpfeb.o
+-rw-rw-r-- 1 ubuntu ubuntu    3462 Aug 23 20:18 bpf_bpfel.go
+-rw-rw-r-- 1 ubuntu ubuntu    7352 Aug 23 20:18 bpf_bpfel.o
+-rw-rw-r-- 1 ubuntu ubuntu    6797 Aug 23 17:59 cilium_ebpf_probe.go
+-rwxrwxr-x 1 ubuntu ubuntu 5221211 Aug 23 20:18 cilium_probe
+-rw-rw-r-- 1 ubuntu ubuntu   14200 Aug 23 13:08 ebpf_probe.o
+
+cilium_probe: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, Go BuildID=..., not stripped
+```
+
+### Step 10: Test the eBPF Probe
+
+```bash
+# Run a quick test (10 seconds)
+make test
+```
+
+**Expected output:**
+```
+Testing eBPF solution...
+Starting eBPF probe (will run for 10 seconds)...
+Cilium Framework eBPF Probe
+============================
+Verbose mode: enabled
+Press Ctrl+C to stop
+
+eBPF program loaded and attached successfully!
+Monitoring sys_read and sys_write calls...
+
+hello sys_read was called
+hello sys_write was called
+hello sys_read was called
+...
+Test completed successfully
+```
+
+### Step 11: Run the Full Program
+
+```bash
+# Run the eBPF probe (will run until Ctrl+C)
+sudo ./cilium_probe
+```
+
+**To stop the program:** Press `Ctrl+C`
+
+**Expected behavior:**
+- Program loads eBPF programs into kernel
+- Monitors all `sys_read` and `sys_write` calls
+- Prints "hello sys_read was called" or "hello sys_write was called"
+- Logs detailed information to `syscalls.log`
+- Gracefully shuts down on Ctrl+C
+
+## Quick Start (After Installation)
+
+If you've already completed the installation, here's the quick way to run the project:
+
+```bash
+# Build the project
+make build
+
+# Test it (10 seconds)
+make test
+
+# Run the full program
+sudo ./cilium_probe
 ```
 
 ## Usage
@@ -176,46 +391,6 @@ The program properly handles termination signals:
 - **Event batching**: Optimized for high-frequency events
 - **Memory management**: Proper cleanup and resource management
 
-## Troubleshooting
-
-### Common Issues
-
-1. **Permission denied**: Ensure running with sudo
-2. **eBPF not supported**: Check kernel version (4.18+ required)
-3. **Build failures**: Verify all dependencies are installed
-
 ### Debug Mode
 
 Enable verbose logging by setting `Verbose: 1` in the configuration.
-
-## Development
-
-### Project Structure
-
-```
-.
-.
-├── ebpf_probe.c          # eBPF C program
-├── vmlinux.h             # BTF headers for CO-RE (required for build)
-├── cilium_ebpf_probe.go  # User space Go program
-├── bpf_bpfel.go          # Auto-generated Go bindings (Little Endian) ← bpf2go
-├── bpf_bpfeb.go          # Auto-generated Go bindings (Big Endian)   ← bpf2go
-├── bpf_bpfel.o           # eBPF bytecode (ELF, LE)                  ← build artifact
-├── bpf_bpfeb.o           # eBPF bytecode (ELF, BE)                  ← build artifact
-├── go.mod                # Go module definition (dependencies)
-├── go.sum                # Checksums for dependencies
-├── Makefile              # Build flow: go generate → go build
-├── README.md             # Documentation
-└── .gitignore            # Recommended: ignore binary, logs, and *.o
-
-```
-
-### Adding New Features
-
-1. **New system calls**: Add kprobes in Go code and corresponding eBPF functions
-2. **Additional data**: Extend the `Event` struct and eBPF data collection
-3. **Configuration**: Add new fields to the `Config` struct
-
-## License
-
-GPL
