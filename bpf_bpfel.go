@@ -12,10 +12,7 @@ import (
 	"github.com/cilium/ebpf"
 )
 
-type bpfConfig struct {
-	Verbose uint32
-	Message [64]int8
-}
+type bpfConfig struct{ Verbose uint32 }
 
 // loadBpf returns the embedded CollectionSpec for bpf.
 func loadBpf() (*ebpf.CollectionSpec, error) {

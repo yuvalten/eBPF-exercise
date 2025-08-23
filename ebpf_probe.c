@@ -6,7 +6,6 @@
 // Cilium-style configuration structure
 struct config {
     __u32 verbose;
-    char message[64];
 } __attribute__((packed));
 
 // Cilium-style event structure
