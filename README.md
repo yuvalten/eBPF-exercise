@@ -95,8 +95,13 @@ bpftool --version
 **Expected output:**
 ```
 Ubuntu clang version 18.1.3 (1ubuntu1)
-go version go1.24.6 linux/amd64
+Target: x86_64-pc-linux-gnu
+Thread model: posix
+InstalledDir: /usr/bin
+go version go1.22.2 linux/amd64
 bpftool v7.6.0
+using libbpf v1.6
+features: llvm, skeletons
 ```
 
 ### Step 4: Install Cilium eBPF Framework
