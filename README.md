@@ -120,11 +120,12 @@ bpf2go --help
 
 ```bash
 # Create project directory
-mkdir ~/github-repo
-cd ~/github-repo
+   mkdir ~/github-repo
+   cd ~/github-repo
 
 # Clone the repository
-git clone https://github.com/yuvalten/eBPF-exercise/tree/ebpf_exercise
+git clone https://github.com/yuvalten/eBPF-exercise
+cd eBPF-exercise/
 
 # Verify project structure
 ll
@@ -133,35 +134,18 @@ ll
 ### Step 6: Initialize Go Module
 
 ```bash
-# Initialize Go module (if not already done)
-#go mod init cilium-ebpf-probe
-
 # Add Cilium eBPF dependency
 go get github.com/cilium/ebpf@latest
 
 # Verify go.mod file
 cat go.mod
 ```
-
-### Step 7: Generate Kernel Headers
+### Step 7: Build the Project
 
 ```bash
-# Generate vmlinux.h for CO-RE (Compile Once, Run Everywhere) support
+# Build the complete eBPF solution, Generate vmlinux.h for CO-RE (Compile Once, Run Everywhere) support
+make clean
 bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
-
-# Verify file was created
-ls -la vmlinux.h
-```
-
-**Expected output:**
-```
--rw-r--r-- 1 ubuntu ubuntu 3145728 Aug 23 15:10 vmlinux.h
-```
-
-### Step 8: Build the Project
-
-```bash
-# Build the complete eBPF solution
 make build
 ```
 
@@ -172,18 +156,12 @@ Building eBPF solution using Cilium framework...
 go mod tidy
 2. Generating eBPF Go bindings...
 go generate
-Compiled /home/ubuntu/github-repo/bpf_bpfel.o
-Stripped /home/ubuntu/github-repo/bpf_bpfel.o
-Wrote /home/ubuntu/github-repo/bpf_bpfel.go
-Compiled /home/ubuntu/github-repo/bpf_bpfeb.o
-Stripped /home/ubuntu/github-repo/bpf_bpfeb.o
-Wrote /home/ubuntu/github-repo/bpf_bpfeb.go
 3. Building executable...
 go build -o cilium_probe cilium_ebpf_probe.go bpf_bpfel.go
 Build complete! Run with: sudo ./cilium_probe
 ```
 
-### Step 9: Verify Build Success
+### Step 8: Verify Build Success
 
 ```bash
 # Check generated files
@@ -206,7 +184,7 @@ file cilium_probe
 cilium_probe: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, Go BuildID=..., not stripped
 ```
 
-### Step 10: Test the eBPF Probe
+### Step 9: Test the eBPF Probe
 
 ```bash
 # Run a quick test (10 seconds)
@@ -232,7 +210,7 @@ hello sys_read was called
 Test completed successfully
 ```
 
-### Step 11: Run the Full Program
+### Step 10: Run the Full Program
 
 ```bash
 # Run the eBPF probe (will run until Ctrl+C)
